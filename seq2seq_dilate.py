@@ -72,7 +72,7 @@ class NetGRU(nn.Module):
 
 
 def train_model(model, optimizer, loss_fn, train_loader, epochs):
-    """Training loop for autoencoder module."""
+    """Training loop for..."""
 
     train_loss, val_loss, = [], []
     with tqdm(range(epochs), unit="epoch", desc=f"DILATE GRU") as pbar:
@@ -104,70 +104,31 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs):
     plt.show()
 
 
+def get_forecasts(model, dataloader):
+    x, y, yhat = [], [], []
+
+    model.eval()  # Set evaluation mode
+    with torch.no_grad():
+        for seq, target in dataloader:
+            seq, target = seq.type(torch.float32).to(device), target.type(torch.float32).to(device)
+
+            x.extend(seq.squeeze().cpu().numpy())
+            y.extend(target.squeeze().cpu().numpy())
+            yhat.extend(model(seq).squeeze().cpu().numpy())
+    return np.array(x), np.array(y), np.array(yhat)
 
 
-
-
-
-# def main():
+# def predict_on_batch(model, test_loader, n):
+#     batch_seq, batch_target = next(iter(test_loader))
+#     batch_seq, batch_target = batch_seq.type(torch.float32).to(device), batch_target.type(torch.float32).to(device)
 #
-#     # Parameters
-#     batch_size = 32
-#     window = 20
-#     horizon = 20
+#     model.eval()
+#     batch_forecast = gru_net(batch_seq)
 #
-#     traffic = CaltransTraffic("./datasets/mvdata/traffic.txt", 0, window, horizon, None)
+#     for i in range(0, n):
+#         seq = batch_seq.detach().cpu().numpy()[i, :, :]
+#         target = batch_target.detach().cpu().numpy()[i, :, :]
+#         forecast = batch_forecast.detach().cpu().numpy()[i, :, :]
 #
-#     train, test = train_test_dataset(traffic, 0.2)
-#
-#     train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=False, drop_last=True)
-#     test_loader = torch.utils.data.DataLoader(test, batch_size=batch_size, shuffle=False, drop_last=True)
-#
-#     encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
-#     decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, fc_units=16, output_size=1).to(device)
-#     gru_net = NetGRU(encoder, decoder, horizon, device).to(device)
-#
-#     optimizer = torch.optim.Adam(gru_net.parameters(), lr=0.01)
-#     loss_fn = torch.nn.MSELoss()
-#
-#     train_model(gru_net, optimizer, loss_fn, train_loader, epochs=10)
-#
-#     # Visualize results
-#     test_seq, test_target = next(iter(test_loader))
-#     test_seq, test_target = test_seq.type(torch.float32).to(device), test_target.type(torch.float32).to(device)
-#
-#     n = 10
-#
-#     gru_net.eval()
-#
-#     pred = gru_net(test_seq).to(device)
-#     inputs = test_seq.detach().cpu().numpy()[1, :, :]
-#     target = test_target.detach().cpu().numpy()[1, :, :]
-#     preds = pred.detach().cpu().numpy()[1, :, :]
-#
-#     plt.plot(range(0, window), inputs, label='input', linewidth=3)
-#     plt.plot(range(window-1, window+horizon), np.concatenate([inputs[window-1:window], target]), label='target', linewidth=3)
-#     plt.plot(range(window-1, window+horizon),  np.concatenate([inputs[window-1:window], preds]), label='prediction', linewidth=3)
-#     plt.xticks(range(0, 40, 2))
-#     plt.legend()
-#     plt.show()
-#
-#     # for i in range(1, n+1):
-#     #     plt.figure()
-#     #     plt.rcParams['figure.figsize'] = (17.0, 5.0)
-#     #
-#     #     pred = gru_net(test_seq).to(device)
-#     #     inputs = test_seq.detach().cpu().numpy()[i, :, :]
-#     #     target = test_target.detach().cpu().numpy()[i, :, :]
-#     #     preds = pred.detach().cpu().numpy()[i, :, :]
-#     #
-#     #     plt.plot(range(0, window), inputs, label='input', linewidth=3)
-#     #     plt.plot(range(window-1, window+horizon), np.concatenate([inputs[window-1:window], target]), label='target', linewidth=3)
-#     #     plt.plot(range(window-1, window+horizon),  np.concatenate([inputs[window-1:window], preds]), label='prediction', linewidth=3)
-#     #     plt.xticks(range(0, 40, 2))
-#     #     plt.legend()
-#     #     plt.show()
-
-
-if __name__ == '__main__':
-    main()
+#         plot_result(seq, target, forecast)
+#         print("(TDI, TDM): ", tdi_tdm(target, forecast))
