@@ -45,9 +45,9 @@ class DecoderRNN(nn.Module):
         return output, hidden
 
 
-class NetGRU(nn.Module):
+class GRUNet(nn.Module):
     def __init__(self, encoder, decoder, target_length, device):
-        super(NetGRU, self).__init__()
+        super(GRUNet, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.target_length = target_length
@@ -71,16 +71,15 @@ class NetGRU(nn.Module):
         return outputs
 
 
-def train_model(model, optimizer, loss_fn, train_loader, epochs):
-    """Training loop for..."""
+def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
+    """Training loop NetGRU model."""
 
+    model.train()
     train_loss, val_loss, = [], []
-    with tqdm(range(epochs), unit="epoch", desc=f"DILATE GRU") as pbar:
+    with tqdm(range(epochs), unit="epoch", desc=f"Training model") as pbar:
         for epoch in pbar:
 
-            model.train()  # Ensure training mode
             running_loss, total_cases, = 0, 0  # Running totals
-
             for seq, target in train_loader:
                 seq, target = seq.type(torch.float32).to(device), target.type(torch.float32).to(device)
 
@@ -89,15 +88,15 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs):
                 loss = loss_fn(target, outputs)
                 optimizer.zero_grad()
                 loss.backward()
+                if clip > 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
                 optimizer.step()
-
                 running_loss += loss.item()
                 total_cases += len(seq)
             train_loss.append(running_loss / total_cases)
             pbar.set_postfix(train_loss=train_loss[epoch])
-
     plt.plot(train_loss, 'b', label='Training loss')
-    plt.title('DILATE GRU loss history')
+    plt.title('Loss history')
     plt.xlabel('Epoch')
     plt.legend()
     plt.tight_layout()
@@ -107,7 +106,7 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs):
 def get_forecasts(model, dataloader):
     x, y, yhat = [], [], []
 
-    model.eval()  # Set evaluation mode
+    model.eval()
     with torch.no_grad():
         for seq, target in dataloader:
             seq, target = seq.type(torch.float32).to(device), target.type(torch.float32).to(device)
