@@ -81,7 +81,7 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs):
             model.train()  # Ensure training mode
             running_loss, total_cases, = 0, 0  # Running totals
 
-            for i, (seq, target) in enumerate(train_loader, 0):
+            for seq, target in train_loader:
                 seq, target = seq.type(torch.float32).to(device), target.type(torch.float32).to(device)
 
                 # Forward backward
@@ -116,19 +116,3 @@ def get_forecasts(model, dataloader):
             y.extend(target.squeeze().cpu().numpy())
             yhat.extend(model(seq).squeeze().cpu().numpy())
     return np.array(x), np.array(y), np.array(yhat)
-
-
-# def predict_on_batch(model, test_loader, n):
-#     batch_seq, batch_target = next(iter(test_loader))
-#     batch_seq, batch_target = batch_seq.type(torch.float32).to(device), batch_target.type(torch.float32).to(device)
-#
-#     model.eval()
-#     batch_forecast = gru_net(batch_seq)
-#
-#     for i in range(0, n):
-#         seq = batch_seq.detach().cpu().numpy()[i, :, :]
-#         target = batch_target.detach().cpu().numpy()[i, :, :]
-#         forecast = batch_forecast.detach().cpu().numpy()[i, :, :]
-#
-#         plot_result(seq, target, forecast)
-#         print("(TDI, TDM): ", tdi_tdm(target, forecast))
