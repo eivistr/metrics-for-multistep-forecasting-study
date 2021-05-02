@@ -1,0 +1,8 @@
+# TEMPORAL CONVOLUTIONAL NETWORK DEFAULT CONFIGURATION
+channel_sizes: [128, 128, 128]
+kernel_size: 5
+dropout: 0.2
+learning_rate: 0.005
+optimizer:
+criterion:
+

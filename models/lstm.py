@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from datasets import CaltransTraffic, split_dataset, train_val_dataset
-
 
 class LSTM(nn.Module):
     def __init__(self, input_size, output_size, hidden_layer_size):

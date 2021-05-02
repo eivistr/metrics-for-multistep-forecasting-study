@@ -1,0 +1,37 @@
+# DATASET SETTINGS
+dataset: fmnist
+dss_frac: 0.25
+d1d2_split: 0.7
+d1_train_frac: 0.8
+d2_train_frac: 0.7
+d2_test_frac: 0.2
+d2_val_frac: 0.1
+
+# GLOBAL SETTINGS
+batch_size: 64
+tsne_n_batches: 5
+
+# SUPERVISED CLASSIFIER (SCN)
+sc_epochs: 10
+sc_lr: 0.003
+sc_loss: crossentropy
+sc_optim: adam
+
+# SEMI-SUPERVISED CLASSIFIER (SSC)
+ssc_epochs: 10
+ssc_lr: 0.003
+ssc_loss: crossentropy
+ssc_optim: adam
+ssc_freeze: False
+
+# AUTOENCODER (AE)
+ae_epochs: 10
+ae_lr: 0.003
+ae_loss: mse
+ae_optim: adam
+ae_latent_dim: 20
+ae_plot_n: 25
+
+
+
+

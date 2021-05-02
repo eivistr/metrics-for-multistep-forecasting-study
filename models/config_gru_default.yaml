@@ -1,0 +1,5 @@
+# NN WITH GATED RECURRENT UNITS
+learning_rate: 0.005
+optimizer:
+criterion:
+

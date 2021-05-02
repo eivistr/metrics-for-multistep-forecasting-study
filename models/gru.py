@@ -4,14 +4,21 @@ import torch.nn.functional as F
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import random
 from tqdm import tqdm
+import yaml
 
 torch.manual_seed(0)
 random.seed(0)
 np.random.seed(0)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+with open(os.path.join(__location__, 'config_gru_default.yaml')) as file:
+    default_config = yaml.safe_load(file)
 
 
 class EncoderRNN(torch.nn.Module):
@@ -76,7 +83,7 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
 
     model.train()
     train_loss, val_loss, = [], []
-    with tqdm(range(epochs), unit="epoch", desc=f"Training model") as pbar:
+    with tqdm(range(epochs), unit="epoch", desc=f"Training GRU model") as pbar:
         for epoch in pbar:
 
             running_loss, total_cases, = 0, 0  # Running totals
@@ -115,3 +122,25 @@ def get_forecasts(model, dataloader):
             y.extend(target.squeeze().cpu().numpy())
             yhat.extend(model(seq).squeeze().cpu().numpy())
     return np.array(x), np.array(y), np.array(yhat)
+
+
+def run_gru_model(train_dl, test_dl, out_size, batch_size, epochs=30, nn_config=default_config):
+
+    encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
+    decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, fc_units=16, output_size=1).to(device)
+    model = GRUNet(encoder, decoder, out_size, device).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=nn_config['learning_rate'])
+    loss_fn = torch.nn.MSELoss()
+
+    train_model(model, optimizer, loss_fn, train_dl, epochs=epochs)
+
+    # Get forecasts on test
+    x_test, y_test, yhat_test = get_forecasts(model, test_dl)
+
+    return x_test, y_test, yhat_test
+
+
+
+
+
+

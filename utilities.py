@@ -42,9 +42,14 @@ def plot_forecasts(x, y, yhat, n=3, shuffle=True):
 class Evaluation:
     """"""
 
-    def __init__(self, y, yhat, dataset_name, method_name):
+    def __init__(self, x, y, yhat, dataset_name, method_name):
+
         self.dataset_name = dataset_name
         self.method_name = method_name
+        self.x = x
+        self.y = y
+        self.yhat = yhat
+
         self.n = y.shape[0]
         self.k = y.shape[1]
 
@@ -69,7 +74,36 @@ class Evaluation:
 
         self.accuracy_measures.loc["MAE"] = self.abs_err.mean(axis=0)
 
-    def plot(self):
+    def plot_forecasts(self, n=3, shuffle=True):
+
+        if shuffle:
+            indices = random.sample(range(0, self.x.shape[0]), n)
+        else:
+            indices = range(0, n)
+
+        index = range(0, self.x.shape[1] + self.y.shape[1])
+        idx = self.x.shape[1]
+
+        for i in indices:
+            fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(20, 2.5))
+            # Forecast
+            axs[0].plot(index[:idx], self.x[i], c='blue', label="Input")
+            axs[0].plot(index[idx:], self.y[i], c='red', label="Truth")
+            axs[0].plot(index[idx:], self.yhat[i], c='green', label="Forecast")
+            axs[0].legend()
+
+            tdi, tdm = calc_tdi_tdm(self.y[i], self.yhat[i])
+            axs[0].set_title(f"Prediction | TDI: {tdi:.2f} | TDM: {tdm:.2f}")
+            # Squared errors
+            axs[1].plot(index[idx:], squared_error(self.y[i], self.yhat[i]))
+            axs[1].set_title(f"Squared errors")
+            # Absolute errors
+            axs[2].plot(index[idx:], absolute_error(self.y[i], self.yhat[i]))
+            axs[2].set_title(f"Absolute errors")
+            plt.tight_layout()
+            plt.show()
+
+    def plot_metrics(self):
         # TDI / TDM
         fig = plt.figure()
         fig.add_subplot(121)

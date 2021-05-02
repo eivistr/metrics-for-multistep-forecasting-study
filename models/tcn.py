@@ -4,14 +4,21 @@ from torch.nn.utils import weight_norm
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import random
 from tqdm import tqdm
+import yaml
 
 torch.manual_seed(0)
 random.seed(0)
 np.random.seed(0)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+with open(os.path.join(__location__, 'config_tcn_default.yaml')) as file:
+    default_config = yaml.safe_load(file)
 
 
 class Chomp1d(nn.Module):
@@ -85,14 +92,12 @@ class TCN(nn.Module):
         return self.linear(y1.squeeze()).unsqueeze(dim=2)
 
 
-def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
+def train_model(model, optimizer, loss_fn, train_loader, epochs):
     """Training loop for TCN model."""
-
-
 
     model.train()
     train_loss, val_loss, = [], []
-    with tqdm(range(epochs), unit="epoch", desc=f"Training model") as pbar:
+    with tqdm(range(epochs), unit="epoch", desc=f"Training TCN model") as pbar:
         for epoch in pbar:
 
             running_loss, total_cases, = 0, 0  # Running totals
@@ -104,8 +109,7 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
                 loss = loss_fn(target, outputs)
                 optimizer.zero_grad()
                 loss.backward()
-                if clip > 0:
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+
                 optimizer.step()
                 running_loss += loss.item()
                 total_cases += len(seq)
@@ -131,3 +135,18 @@ def get_forecasts(model, dataloader):
             y.extend(target.squeeze().cpu().numpy())
             yhat.extend(model(seq).squeeze().cpu().numpy())
     return np.array(x), np.array(y), np.array(yhat)
+
+
+def run_tcn_model(train_dl, test_dl, in_size, out_size, epochs=30, nn_config=default_config):
+
+    model = TCN(in_size, out_size, nn_config['channel_sizes'], nn_config['kernel_size'], nn_config['dropout'])
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=nn_config['learning_rate'])
+    loss_fn = torch.nn.MSELoss()
+
+    train_model(model, optimizer, loss_fn, train_dl, epochs=epochs)
+
+    # Get forecasts on test
+    x_test, y_test, yhat_test = get_forecasts(model, test_dl)
+
+    return x_test, y_test, yhat_test
