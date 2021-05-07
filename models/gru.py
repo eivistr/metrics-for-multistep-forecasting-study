@@ -18,7 +18,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 with open(os.path.join(__location__, 'config_gru_default.yaml')) as file:
-    default_config = yaml.safe_load(file)
+    default_cfg = yaml.safe_load(file)
 
 
 class EncoderRNN(torch.nn.Module):
@@ -121,15 +121,19 @@ def get_forecasts(model, dataloader):
             x.extend(seq.squeeze().cpu().numpy())
             y.extend(target.squeeze().cpu().numpy())
             yhat.extend(model(seq).squeeze().cpu().numpy())
-    return np.array(x), np.array(y), np.array(yhat)
+
+    x, y, yhat = np.array(x), np.array(y), np.array(yhat)
+    assert x.shape == y.shape == yhat.shape, "Forecast outputs must have equal dimensions"
+
+    return x, y, yhat
 
 
-def run_gru_model(train_dl, test_dl, out_size, batch_size, epochs=30, nn_config=default_config):
+def run_gru_model(train_dl, test_dl, out_size, batch_size, epochs, nn_cfg=default_cfg):
 
     encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
     decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, fc_units=16, output_size=1).to(device)
     model = GRUNet(encoder, decoder, out_size, device).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=nn_config['learning_rate'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=nn_cfg['learning_rate'])
     loss_fn = torch.nn.MSELoss()
 
     train_model(model, optimizer, loss_fn, train_dl, epochs=epochs)

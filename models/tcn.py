@@ -18,7 +18,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 with open(os.path.join(__location__, 'config_tcn_default.yaml')) as file:
-    default_config = yaml.safe_load(file)
+    default_cfg = yaml.safe_load(file)
 
 
 class Chomp1d(nn.Module):
@@ -92,7 +92,7 @@ class TCN(nn.Module):
         return self.linear(y1.squeeze()).unsqueeze(dim=2)
 
 
-def train_model(model, optimizer, loss_fn, train_loader, epochs):
+def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
     """Training loop for TCN model."""
 
     model.train()
@@ -109,7 +109,8 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs):
                 loss = loss_fn(target, outputs)
                 optimizer.zero_grad()
                 loss.backward()
-
+                if clip > 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
                 optimizer.step()
                 running_loss += loss.item()
                 total_cases += len(seq)
@@ -134,14 +135,18 @@ def get_forecasts(model, dataloader):
             x.extend(seq.squeeze().cpu().numpy())
             y.extend(target.squeeze().cpu().numpy())
             yhat.extend(model(seq).squeeze().cpu().numpy())
-    return np.array(x), np.array(y), np.array(yhat)
+
+    x, y, yhat = np.array(x), np.array(y), np.array(yhat)
+    assert x.shape == y.shape == yhat.shape, "Forecast outputs must have equal dimensions"
+
+    return x, y, yhat
 
 
-def run_tcn_model(train_dl, test_dl, in_size, out_size, epochs=30, nn_config=default_config):
+def run_tcn_model(train_dl, test_dl, in_size, out_size, epochs, nn_cfg=default_cfg):
 
-    model = TCN(in_size, out_size, nn_config['channel_sizes'], nn_config['kernel_size'], nn_config['dropout'])
+    model = TCN(in_size, out_size, nn_cfg['channel_sizes'], nn_cfg['kernel_size'], nn_cfg['dropout'])
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=nn_config['learning_rate'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=nn_cfg['learning_rate'])
     loss_fn = torch.nn.MSELoss()
 
     train_model(model, optimizer, loss_fn, train_dl, epochs=epochs)
