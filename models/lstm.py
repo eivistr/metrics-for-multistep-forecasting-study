@@ -1,63 +1,164 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import random
+from tqdm import tqdm
+import yaml
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
-import seaborn as sns
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
-class LSTM(nn.Module):
-    def __init__(self, input_size, output_size, hidden_layer_size):
-        super().__init__()
-
-        self.hidden_layer_size = hidden_layer_size
-        self.lstm = nn.LSTM(input_size, hidden_layer_size)
-        self.linear = nn.Linear(hidden_layer_size, output_size)
-        self.hidden_cell = (torch.zeros(1,1,self.hidden_layer_size), torch.zeros(1,1,self.hidden_layer_size))
-
-    def forward(self, input_seq):
-        lstm_out, self.hidden_cell = self.lstm(input_seq.view(len(input_seq), 1, -1), self.hidden_cell)
-        predictions = self.linear(lstm_out.view(len(input_seq), -1))
-        return predictions[-1]
+with open(os.path.join(__location__, 'config_lstm_default.yaml')) as file:
+    default_cfg = yaml.safe_load(file)
 
 
-def main():
-    window = 20
-    horizon = 5
+class EncoderLSTM(torch.nn.Module):
+    def __init__(self, input_features, hidden_size, num_layers, dropout=0.2):
+        super(EncoderLSTM, self).__init__()
 
-    traffic = CaltransTraffic("./data/mvdata/traffic.txt", 0, window, horizon, None)
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(input_size=input_features, hidden_size=hidden_size, num_layers=num_layers, dropout=dropout,
+                            batch_first=True)
 
-    train, test = train_val_dataset(traffic, 0.2)
+    def forward(self, input_seq, hidden):  # input [batch_size, length T, dimensionality d]
+        output, hidden = self.lstm(input_seq, hidden)
+        return output, hidden
 
-    train_loader = torch.utils.data.DataLoader(train, batch_size=16, shuffle=False, drop_last=True)
-    test_loader = torch.utils.data.DataLoader(test, batch_size=16, shuffle=False, drop_last=True)
+    def init_hidden(self, batch_size):
+        return (torch.zeros(self.num_layers, batch_size, self.hidden_size).to(device),
+                torch.zeros(self.num_layers, batch_size, self.hidden_size).to(device))
 
-    model = LSTM(input_size=1, output_size=horizon, hidden_layer_size=100)
-    loss_function = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    epochs = 150
+class DecoderLSTM(nn.Module):
+    def __init__(self, input_features, output_features, hidden_size, num_layers, dropout=0.2):
+        super(DecoderLSTM, self).__init__()
 
-    for i in range(epochs):
-        for seq, labels in train_loader:
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(input_size=input_features, hidden_size=hidden_size, num_layers=num_layers, dropout=dropout,
+                            batch_first=True)
+        self.fc = nn.Linear(hidden_size, int(hidden_size / 2))
+        self.out = nn.Linear(int(hidden_size / 2), output_features)
 
-            print(seq)
-            print(labels)
-            optimizer.zero_grad()
-            model.hidden_cell = (torch.zeros(1, 1, model.hidden_layer_size), torch.zeros(1, 1, model.hidden_layer_size))
+    def forward(self, input_seq, hidden):
+        output, hidden = self.lstm(input_seq, hidden)
+        output = F.relu(self.fc(output))
+        output = self.out(output)
+        return output, hidden
 
-            y_pred = model(seq)
 
-            single_loss = loss_function(y_pred, labels)
-            single_loss.backward()
-            optimizer.step()
+class Seq2SeqLSTM(nn.Module):
+    def __init__(self, encoder, decoder, target_length):
+        super(Seq2SeqLSTM, self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.target_length = target_length
 
-        if i % 25 == 1:
-            print(f'epoch: {i:3} loss: {single_loss.item():10.8f}')
+        assert encoder.hidden_size == decoder.hidden_size, 'Hidden dimensions of encoder and decoder must be equal!'
+        assert encoder.num_layers == decoder.num_layers, 'Encoder and decoder must have equal number of layers!'
 
-    print(f'epoch: {i:3} loss: {single_loss.item():10.10f}')
+    def forward(self, x):
+        input_length = x.shape[1]
+        batch_size = x.shape[0]
+        encoder_hidden = self.encoder.init_hidden(batch_size)
 
-if __name__ == "__main__":
-    main()
+        for ei in range(input_length):
+            encoder_output, encoder_hidden = self.encoder(x[:, ei:ei + 1, :], encoder_hidden)
 
+        decoder_input = x[:, -1, :].unsqueeze(1)  # first decoder input = last element of input sequence
+        decoder_hidden = encoder_hidden
+
+        outputs = torch.zeros([x.shape[0], self.target_length, x.shape[2]]).to(device)
+        for di in range(self.target_length):
+            decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+            decoder_input = decoder_output
+            outputs[:, di:di + 1, :] = decoder_output
+        return outputs
+
+
+def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
+    model.train()
+    train_loss, val_loss, = [], []
+    with tqdm(range(epochs), unit="epoch", desc=f"Training LSTM model") as pbar:
+        for epoch in pbar:
+
+            running_loss, total_cases, = 0, 0  # Running totals
+            for seq, target in train_loader:
+                seq, target = seq.to(device), target.to(device)
+
+                # Forward backward
+                outputs = model(seq)
+                loss = loss_fn(target, outputs)
+                optimizer.zero_grad()
+                loss.backward()
+                if clip > 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+                optimizer.step()
+                running_loss += loss.item()
+                total_cases += len(seq)
+            train_loss.append(running_loss / total_cases)
+            pbar.set_postfix(train_loss=train_loss[epoch])
+    plt.plot(train_loss, 'b', label='Training loss')
+    plt.title('Loss history')
+    plt.xlabel('Epoch')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def get_forecasts(model, dataloader):
+    x, y, yhat = [], [], []
+
+    model.eval()
+    with torch.no_grad():
+        for seq, target in dataloader:
+            seq, target = seq.to(device), target.to(device)
+
+            x.extend(seq.squeeze().cpu().numpy())
+            y.extend(target.squeeze().cpu().numpy())
+            yhat.extend(model(seq).squeeze().cpu().numpy())
+
+    x, y, yhat = np.array(x), np.array(y), np.array(yhat)
+    assert x.shape == y.shape == yhat.shape, "Forecast outputs must have equal dimensions"
+
+    return x, y, yhat
+
+
+def run_lstm_model(train_dl, test_dl, out_size, epochs, cfg=default_cfg):
+    encoder = EncoderLSTM(input_features=1, hidden_size=cfg['hidden_size'], num_layers=cfg['num_layers'],
+                          dropout=cfg['dropout']).to(device)
+    decoder = DecoderLSTM(input_features=1, hidden_size=cfg['hidden_size'], num_layers=cfg['num_layers'],
+                          dropout=cfg['dropout'], output_features=1).to(device)
+    model = Seq2SeqLSTM(encoder, decoder, out_size).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
+    loss_fn = torch.nn.MSELoss()
+
+    train_model(model, optimizer, loss_fn, train_dl, epochs=epochs)
+
+    # Get forecasts on test
+    x_test, y_test, yhat_test = get_forecasts(model, test_dl)
+
+    return x_test, y_test, yhat_test
+
+
+if __name__ == '__main__':
+    from datasets import get_dataset
+
+    in_size = 24
+    out_size = 24
+    test_size = 500
+    batch_size = 10
+    epochs = 20
+    lr = 0.01
+
+    train, test = get_dataset('mvdata', 'traffic', in_size, out_size, test_size)
+    train_dl = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=True, drop_last=True)
+    test_dl = torch.utils.data.DataLoader(test, batch_size=batch_size, shuffle=False, drop_last=True)
+
+    run_lstm_model(train_dl, test_dl, out_size, epochs)

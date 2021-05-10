@@ -1,13 +1,13 @@
-import torch
-import torch.nn as nn
-from torch.nn.utils import weight_norm
-
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import random
 from tqdm import tqdm
 import yaml
+
+import torch
+import torch.nn as nn
+from torch.nn.utils import weight_norm
 
 torch.manual_seed(0)
 random.seed(0)
@@ -93,8 +93,6 @@ class TCN(nn.Module):
 
 
 def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
-    """Training loop for TCN model."""
-
     model.train()
     train_loss, val_loss, = [], []
     with tqdm(range(epochs), unit="epoch", desc=f"Training TCN model") as pbar:
@@ -102,7 +100,7 @@ def train_model(model, optimizer, loss_fn, train_loader, epochs, clip=0):
 
             running_loss, total_cases, = 0, 0  # Running totals
             for seq, target in train_loader:
-                seq, target = seq.type(torch.float32).to(device), target.type(torch.float32).to(device)
+                seq, target = seq.to(device), target.to(device)
 
                 # Forward backward
                 outputs = model(seq)
@@ -130,7 +128,7 @@ def get_forecasts(model, dataloader):
     model.eval()
     with torch.no_grad():
         for seq, target in dataloader:
-            seq, target = seq.type(torch.float32).to(device), target.type(torch.float32).to(device)
+            seq, target = seq.to(device), target.to(device)
 
             x.extend(seq.squeeze().cpu().numpy())
             y.extend(target.squeeze().cpu().numpy())
@@ -142,11 +140,11 @@ def get_forecasts(model, dataloader):
     return x, y, yhat
 
 
-def run_tcn_model(train_dl, test_dl, in_size, out_size, epochs, nn_cfg=default_cfg):
+def run_tcn_model(train_dl, test_dl, in_size, out_size, epochs, cfg=default_cfg):
 
-    model = TCN(in_size, out_size, nn_cfg['channel_sizes'], nn_cfg['kernel_size'], nn_cfg['dropout'])
+    model = TCN(in_size, out_size, cfg['channel_sizes'], cfg['kernel_size'], cfg['dropout'])
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=nn_cfg['learning_rate'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
     loss_fn = torch.nn.MSELoss()
 
     train_model(model, optimizer, loss_fn, train_dl, epochs=epochs)

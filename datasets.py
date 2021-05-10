@@ -9,7 +9,7 @@ __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file
 
 UCR_FOLDER = __location__ + '/data/UCRArchive_2018/'
 ICMC_FOLDER = __location__ + '/data/ICMC-USP/'
-TRAFFIC_FOLDER = __location__ + '/data/mvdata/traffic.txt'
+MVDATA_FOLDER = __location__ + '/data/mvdata/'
 
 
 class UCRDataset(torch.utils.data.Dataset):
@@ -17,7 +17,7 @@ class UCRDataset(torch.utils.data.Dataset):
     def __init__(self, filepath, input_size, output_size, transform=None):
 
         df = pd.read_csv(filepath, delimiter="\t", header=None).drop(0, axis=1).transpose()
-        self.series = torch.tensor(df.values)
+        self.series = torch.tensor(df.values, dtype=torch.float32)
         self.input_size = input_size
         self.output_size = output_size
 
@@ -42,9 +42,9 @@ class ICMCDataset(torch.utils.data.Dataset):
         test_split = values[-test_size:]
 
         if train:
-            self.series = torch.tensor(train_split)
+            self.series = torch.tensor(train_split, dtype=torch.float32)
         else:
-            self.series = torch.tensor(test_split)
+            self.series = torch.tensor(test_split, dtype=torch.float32)
 
         self.input_size = input_size
         self.output_size = output_size
@@ -58,7 +58,7 @@ class ICMCDataset(torch.utils.data.Dataset):
         return train_seq, target_seq
 
 
-class TrafficDataset(torch.utils.data.Dataset):
+class MVDataset(torch.utils.data.Dataset):
     """"""
 
     def __init__(self, filepath, input_size, output_size, train, test_size, usecol=0, transform=None,):
@@ -68,9 +68,9 @@ class TrafficDataset(torch.utils.data.Dataset):
         test_split = values[-test_size:]
 
         if train:
-            self.series = torch.tensor(train_split)
+            self.series = torch.tensor(train_split, dtype=torch.float32)
         else:
-            self.series = torch.tensor(test_split)
+            self.series = torch.tensor(test_split, dtype=torch.float32)
 
         self.input_size = input_size
         self.output_size = output_size
@@ -91,14 +91,14 @@ def get_dataset(archive, ds_name, in_size, out_size, test_size=None):
         test = UCRDataset(UCR_FOLDER + ds_name + '/' + ds_name + '_TEST.tsv', in_size, out_size)
 
     elif archive == "ICMC":
-        assert test_size is not None, "Must specify test_frac"
+        assert test_size is not None, "Must specify text_size"
         train = ICMCDataset(ICMC_FOLDER + ds_name + '.data', in_size, out_size, train=True, test_size=test_size)
         test = ICMCDataset(ICMC_FOLDER + ds_name + '.data', in_size, out_size, train=False, test_size=test_size)
 
-    elif ds_name == "Traffic":
-        assert test_size is not None, "Must specify test_frac"
-        train = TrafficDataset(TRAFFIC_FOLDER, in_size, out_size, train=True, test_size=test_size, usecol=0)
-        test = TrafficDataset(TRAFFIC_FOLDER, in_size, out_size, train=False, test_size=test_size, usecol=0)
+    elif archive == "mvdata":
+        assert test_size is not None, "Must specify text_size"
+        train = MVDataset(MVDATA_FOLDER + ds_name + '.txt', in_size, out_size, train=True, test_size=test_size, usecol=0)
+        test = MVDataset(MVDATA_FOLDER + ds_name + '.txt', in_size, out_size, train=False, test_size=test_size, usecol=0)
 
     else:
         raise ValueError("Invalid dataset")

@@ -3,7 +3,7 @@ import pmdarima as pm
 from tqdm import tqdm
 
 
-MAX_ITER = 50
+MAX_ITER = 40
 
 
 def get_forecasts(model, test, in_size, out_size):

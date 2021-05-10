@@ -1,0 +1,15 @@
+# NN WITH GATED RECURRENT UNITS
+archive: mvdata
+dataset_name: solar_AL
+
+test_size: 1024
+in_size: 144
+out_size: 144
+
+arima_m: 144
+arima_window: 2880
+batch_size: 32
+tcn_epochs: 25
+gru_epochs: 25
+
+save_results_as: electricity_test.pickle

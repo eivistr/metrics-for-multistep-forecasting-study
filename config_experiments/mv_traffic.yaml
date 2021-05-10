@@ -1,14 +1,16 @@
 # NN WITH GATED RECURRENT UNITS
-archive:
-dataset_name: Traffic
-in_size: 24
-out_size: 24
-batch_size: 16
-tcn_epochs: 25
-gru_epochs: 25
-arima_window: 480
-arima_m: 24
+archive: mvdata
+dataset_name: traffic
 
 test_size: 512
+in_size: 24
+out_size: 24
+
+arima_m: 24
+arima_window: 480
+batch_size: 32
+tcn_epochs: 25
+gru_epochs: 25
+lstm_epochs: 25
 
 save_results_as: traffic_test.pickle
