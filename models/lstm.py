@@ -9,6 +9,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+torch.manual_seed(0)
+random.seed(0)
+np.random.seed(0)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -18,7 +22,7 @@ with open(os.path.join(__location__, 'config_lstm_default.yaml')) as file:
 
 
 class EncoderLSTM(torch.nn.Module):
-    def __init__(self, input_features, hidden_size, num_layers, dropout=0.2):
+    def __init__(self, input_features, hidden_size, num_layers, dropout=0):
         super(EncoderLSTM, self).__init__()
 
         self.hidden_size = hidden_size
@@ -36,7 +40,7 @@ class EncoderLSTM(torch.nn.Module):
 
 
 class DecoderLSTM(nn.Module):
-    def __init__(self, input_features, output_features, hidden_size, num_layers, dropout=0.2):
+    def __init__(self, input_features, output_features, hidden_size, num_layers, dropout=0):
         super(DecoderLSTM, self).__init__()
 
         self.hidden_size = hidden_size

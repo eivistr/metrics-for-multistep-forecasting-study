@@ -22,7 +22,7 @@ with open(os.path.join(__location__, 'config_gru_default.yaml')) as file:
 
 
 class EncoderGRU(torch.nn.Module):
-    def __init__(self, input_features, hidden_size, num_layers, dropout=0.2):
+    def __init__(self, input_features, hidden_size, num_layers, dropout=0):
         super(EncoderGRU, self).__init__()
 
         self.hidden_size = hidden_size
@@ -39,7 +39,7 @@ class EncoderGRU(torch.nn.Module):
 
 
 class DecoderGRU(nn.Module):
-    def __init__(self, input_features, output_features, hidden_size, num_layers, dropout=0.2):
+    def __init__(self, input_features, output_features, hidden_size, num_layers, dropout=0):
         super(DecoderGRU, self).__init__()
 
         self.hidden_size = hidden_size

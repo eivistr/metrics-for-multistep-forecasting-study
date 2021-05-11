@@ -2,15 +2,15 @@
 archive: mvdata
 dataset_name: traffic
 
-test_size: 512
+test_size: 240
 in_size: 24
 out_size: 24
 
 arima_m: 24
-arima_window: 480
+arima_window: 240
 batch_size: 32
-tcn_epochs: 25
-gru_epochs: 25
-lstm_epochs: 25
+tcn_epochs: 20
+gru_epochs: 20
+lstm_epochs: 20
 
 save_results_as: traffic_test.pickle

@@ -41,7 +41,7 @@ class Result:
 
         handles, labels = ax.get_legend_handles_labels()
         fig.legend(handles, labels, loc='upper right', ncol=3)
-        fig.suptitle(f"{self.n}-step forecasts, {self.model_name} on dataset {self.dataset_name}", size=18)
+        fig.suptitle(f"{self.model_name} on dataset {self.dataset_name}, {self.k}-step forecasts", size=18)
         plt.tight_layout()
         plt.show()
 

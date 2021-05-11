@@ -44,7 +44,7 @@ def run_models_on_dataset(archive, ds_name, in_size, out_size, batch_size, tcn_e
 
     # Run LSTM model
     x_test, y_test, yhat_test = run_lstm_model(train_dl, test_dl, out_size=out_size, epochs=lstm_epochs)
-    results.append(Result(x_test, y_test, yhat_test, ds_name, "GRU"))
+    results.append(Result(x_test, y_test, yhat_test, ds_name, "LSTM"))
     if plot:
         results[-1].plot_forecasts()
 
@@ -88,7 +88,7 @@ def get_parser():
     return parser
 
 
-def main(cfg_file):
+def run(cfg_file):
 
     with open(r'./config_experiments/' + cfg_file) as file:
         cfg = yaml.safe_load(file)
@@ -112,5 +112,8 @@ def main(cfg_file):
 
 
 if __name__ == '__main__':
-    args = get_parser().parse_args()
-    main(args.filename)
+    # args = get_parser().parse_args()
+    # run(args.filename)
+
+    run('mv_traffic.yaml')
+    run('mv_electricity.yaml')

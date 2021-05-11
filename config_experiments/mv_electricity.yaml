@@ -2,15 +2,15 @@
 archive: mvdata
 dataset_name: electricity
 
-test_size: 512
+test_size: 576
 in_size: 144
 out_size: 144
 
 arima_m: 24
 arima_window: 1440
 batch_size: 64
-tcn_epochs: 25
-gru_epochs: 25
-lstm_epochs: 25
+tcn_epochs: 20
+gru_epochs: 20
+lstm_epochs: 20
 
 save_results_as: electricity_test.pickle

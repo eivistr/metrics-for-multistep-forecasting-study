@@ -1,7 +1,10 @@
 import numpy as np
+import random
 import pmdarima as pm
 from tqdm import tqdm
 
+random.seed(0)
+np.random.seed(0)
 
 MAX_ITER = 40
 
