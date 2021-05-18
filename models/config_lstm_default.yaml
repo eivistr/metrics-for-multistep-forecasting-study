@@ -1,7 +1,7 @@
 # Seq2seq LSTM
 hidden_size: 128
-num_layers: 2
-dropout: 0.2
+num_layers: 1
+dropout: 0
 learning_rate: 0.01
 optimizer:
 criterion:

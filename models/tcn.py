@@ -142,7 +142,7 @@ def get_forecasts(model, dataloader):
 
 def run_tcn_model(train_dl, test_dl, in_size, out_size, epochs, cfg=default_cfg):
 
-    model = TCN(in_size, out_size, cfg['channel_sizes'], cfg['kernel_size'], cfg['dropout'])
+    model = TCN(in_size, out_size, cfg['channel_sizes'], cfg['kernel_size'], cfg['dropout']).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
     loss_fn = torch.nn.MSELoss()

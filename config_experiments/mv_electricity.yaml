@@ -6,9 +6,9 @@ test_size: 576
 in_size: 144
 out_size: 144
 
-arima_m: 24
+arima_m: 144
 arima_window: 1440
-batch_size: 64
+batch_size: 32
 tcn_epochs: 20
 gru_epochs: 20
 lstm_epochs: 20
